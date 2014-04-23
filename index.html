@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <title>Furnace by forge</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Furnace</h1>
+        <h2>Lightweight Modular Service Container - Based on existing Maven and CDI Standard Technologies. </h2>
+
+        <section id="downloads">
+          <a href="https://github.com/forge/furnace/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/forge/furnace/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/forge/furnace" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a name="furnace" class="anchor" href="#furnace"><span class="octicon octicon-link"></span></a>furnace</h1>
+
+<p>Lightweight Modular Service Container - Based Maven and JBoss Modules. It's easier than OSGi :)</p>
+
+<h1>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h1>
+
+<p>First, include the Furnace dependency in your project:</p>
+
+<pre><code>&lt;dependency&gt;
+   &lt;groupId&gt;org.jboss.forge.furnace&lt;/groupId&gt;
+   &lt;artifactId&gt;furnace-se&lt;/artifactId&gt;
+   &lt;version&gt;${version.furnace}&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
+
+<p>Then configure the container and start it:</p>
+
+<pre><code>Furnace furnace = FurnaceFactory.getFurnace()
+furnace.addRepository(AddonRepositoryMode.MUTABLE, new File(OperatingSystemUtils.getUserForgeDir(), "addons"));
+</code></pre>
+
+<p>To install addons, you will need to add the following dependencies to your project:</p>
+
+<pre><code>&lt;dependency&gt;
+   &lt;groupId&gt;org.jboss.forge.furnace&lt;/groupId&gt;
+   &lt;artifactId&gt;furnace-manager&lt;/artifactId&gt;
+   &lt;version&gt;${version.furnace}&lt;/version&gt;
+&lt;/dependency&gt;
+
+&lt;dependency&gt;
+   &lt;groupId&gt;org.jboss.forge.furnace&lt;/groupId&gt;
+   &lt;artifactId&gt;furnace-manager-resolver-maven&lt;/artifactId&gt;
+   &lt;version&gt;${version.furnace}&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
+
+<p>Then create a new AddonManager:</p>
+
+<pre><code>AddonManager manager = new AddonManagerImpl(furnace, new MavenAddonDependencyResolver())
+</code></pre>
+
+<p>Once you have an <code>AddonManager</code> instance, you can begin to install addons (You can do this while Furnace is running):</p>
+
+<pre><code>InstallRequest request = manager.install(AddonId.from("org.example:my-addon", "1.0.0.Final"));
+request.perform();
+</code></pre>
+
+<p>Don't forget to start Furnace:</p>
+
+<pre><code>Future&lt;Void&gt; future = furnace.startAsync();
+future.get(); // wait for Furnace to start, before continuing.
+</code></pre>
+
+<p>Once this is done, you'll now be able to request services from Furnace's <code>AddonRegistry</code>, and utilize the functionality of the addons you've installed:</p>
+
+<pre><code>MyServiceType instance = furnace.getAddonRegistry().getServices(MyServiceType.class).get();
+</code></pre>
+
+<p>Of course, addons can be pre-bundled into a project using the Furnace Maven Plugin, making it much simpler (and faster) to run your application:</p>
+
+<pre><code>&lt;plugin&gt;
+   &lt;groupId&gt;org.jboss.forge.furnace&lt;/groupId&gt;
+   &lt;artifactId&gt;furnace-maven-plugin&lt;/artifactId&gt;
+   &lt;version&gt;${version.furnace}&lt;/version&gt;
+   &lt;executions&gt;
+      &lt;execution&gt;
+         &lt;id&gt;deploy-addons&lt;/id&gt;
+         &lt;phase&gt;prepare-package&lt;/phase&gt;
+         &lt;goals&gt;
+            &lt;goal&gt;addon-install&lt;/goal&gt;
+         &lt;/goals&gt;
+         &lt;inherited&gt;false&lt;/inherited&gt;
+         &lt;configuration&gt;
+            &lt;addonRepository&gt;${basedir}/addon-repository&lt;/addonRepository&gt;
+            &lt;addonIds&gt;
+               &lt;addonId&gt;org.example:my-addon,1.0.0.Final&lt;/addonId&gt;
+            &lt;/addonIds&gt;
+         &lt;/configuration&gt;
+      &lt;/execution&gt;
+   &lt;/executions&gt;
+&lt;/plugin&gt;
+</code></pre>
+
+<p>To learn more about writing addons, see the full documentation here: <a href="https://github.com/forge/core#developing-an-addon">https://github.com/forge/core#developing-an-addon</a></p>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
