@@ -2,6 +2,7 @@ package org.jboss.forge.arquillian.util;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Map;
@@ -62,18 +63,9 @@ public final class ShrinkWrapUtil
 
             Node node = entry.getValue();
             Asset asset = node.getAsset();
-            FileOutputStream fos = null;
-            InputStream is = null;
-            try
+            try (FileOutputStream fos = new FileOutputStream(target); InputStream is = asset.openStream();)
             {
-               fos = new FileOutputStream(target);
-               is = asset.openStream();
                Streams.write(is, fos);
-            }
-            finally
-            {
-               Streams.closeQuietly(is);
-               Streams.closeQuietly(fos);
             }
          }
       }
@@ -111,33 +103,9 @@ public final class ShrinkWrapUtil
 
    public static URL toURL(final Descriptor descriptor)
    {
-      // create a random named temp file, then delete and use it as a directory
       try
       {
-         File root = File.createTempFile("arquillian", descriptor.getDescriptorName());
-         root.delete();
-         root.mkdirs();
-
-         File deployment = new File(root, descriptor.getDescriptorName());
-         deployment.deleteOnExit();
-
-         FileOutputStream stream = new FileOutputStream(deployment);
-         try
-         {
-            descriptor.exportTo(stream);
-         }
-         finally
-         {
-            try
-            {
-               stream.close();
-            }
-            catch (Exception e)
-            {
-               throw new RuntimeException(e);
-            }
-         }
-
+         File deployment = createDeployment(descriptor);
          return deployment.toURI().toURL();
       }
       catch (Exception e)
@@ -146,4 +114,28 @@ public final class ShrinkWrapUtil
       }
    }
 
+   private static File createDeployment(final Descriptor descriptor) throws IOException
+   {
+      File root = createTempFile(descriptor);
+      try (FileOutputStream stream = new FileOutputStream(root))
+      {
+         File deployment = new File(root, descriptor.getDescriptorName());
+         deployment.deleteOnExit();
+         descriptor.exportTo(stream);
+         return deployment;
+      }
+      catch (Exception e)
+      {
+         throw new RuntimeException("Could not export deployment to temp", e);
+      }
+   }
+
+   private static File createTempFile(final Descriptor descriptor) throws IOException
+   {
+      // create a random named temp file, then delete and use it as a directory
+      File root = File.createTempFile("arquillian", descriptor.getDescriptorName());
+      root.delete();
+      root.mkdirs();
+      return root;
+   }
 }

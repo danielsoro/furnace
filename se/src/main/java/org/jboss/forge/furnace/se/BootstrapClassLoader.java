@@ -1,6 +1,5 @@
 package org.jboss.forge.furnace.se;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -99,22 +98,15 @@ public class BootstrapClassLoader extends URLClassLoader
                   log.log(Level.FINE, String.format("ZipEntry detected: %s len %d added %TD",
                            original.toExternalForm() + entry.getName(), entry.getSize(),
                            new Date(entry.getTime())));
-
-                  FileOutputStream output = null;
-                  try
+                  try (FileOutputStream output = new FileOutputStream(new File(tempDir, entry.getName()));)
                   {
                      byte[] buffer = new byte[2048];
-                     output = new FileOutputStream(new File(tempDir, entry.getName()));
+
                      int len = 0;
                      while ((len = stream.read(buffer)) > 0)
                      {
                         output.write(buffer, 0, len);
                      }
-                  }
-                  finally
-                  {
-                     if (output != null)
-                        output.close();
                   }
                }
             }
@@ -149,9 +141,8 @@ public class BootstrapClassLoader extends URLClassLoader
       {
          File tempDir = OperatingSystemUtils.createTempDir();
          List<URL> result = new ArrayList<URL>();
-         try
+         try (ZipFile zip = new ZipFile(file))
          {
-            ZipFile zip = new ZipFile(file);
             Enumeration<? extends ZipEntry> entries = zip.entries();
             while (entries.hasMoreElements())
             {
@@ -162,13 +153,12 @@ public class BootstrapClassLoader extends URLClassLoader
                   log.log(Level.FINE, String.format("ZipEntry detected: %s len %d added %TD",
                            file.getAbsolutePath() + "/" + entry.getName(), entry.getSize(),
                            new Date(entry.getTime())));
-
-                  result.add(copy(tempDir, entry.getName(),
-                           JarLocator.class.getClassLoader().getResource(name).openStream()
-                           ).toURL());
+                  try (InputStream input = JarLocator.class.getClassLoader().getResource(name).openStream())
+                  {
+                     result.add(copy(tempDir, entry.getName(), input).toURL());
+                  }
                }
             }
-            zip.close();
          }
          catch (ZipException e)
          {
@@ -180,13 +170,11 @@ public class BootstrapClassLoader extends URLClassLoader
       private File copy(File targetDir, String name, InputStream input)
       {
          File outputFile = new File(targetDir, name);
-         
+
          outputFile.getParentFile().mkdirs();
 
-         FileOutputStream output = null;
-         try
+         try (FileOutputStream output = new FileOutputStream(outputFile))
          {
-            output = new FileOutputStream(outputFile);
             final byte[] buffer = new byte[4096];
             int read = 0;
             while ((read = input.read(buffer)) != -1)
@@ -199,27 +187,7 @@ public class BootstrapClassLoader extends URLClassLoader
          {
             throw new RuntimeException("Could not write out jar file " + name, e);
          }
-         finally
-         {
-            close(input);
-            close(output);
-         }
          return outputFile;
-      }
-
-      private void close(Closeable closeable)
-      {
-         try
-         {
-            if (closeable != null)
-            {
-               closeable.close();
-            }
-         }
-         catch (Exception e)
-         {
-            throw new RuntimeException("Could not close stream", e);
-         }
       }
    }
 }

@@ -110,7 +110,7 @@ public abstract class Streams
    {
       return new ByteArrayInputStream(data.getBytes());
    }
-
+   
    /**
     * Closes the resource without throwing any exception
     *
